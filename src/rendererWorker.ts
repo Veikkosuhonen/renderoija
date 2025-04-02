@@ -33,6 +33,7 @@ const render = (job: JobParams) => {
     // Set up uniforms
     const iResolutionLocation = gl.getUniformLocation(program, "iResolution")!;
     const iTimeLocation = gl.getUniformLocation(program, "iTime")!;
+    const iFrameLocation = gl.getUniformLocation(program, "iFrame")!;
     const iMouseLocation = gl.getUniformLocation(program, "iMouse")!;
 
     // Set up attributes
@@ -52,6 +53,7 @@ const render = (job: JobParams) => {
 
         gl.uniform3f(iResolutionLocation, width, height, 1);
         gl.uniform1f(iTimeLocation, time);
+        gl.uniform1i(iFrameLocation, frame);
         gl.uniform4f(iMouseLocation, 0, 0, 0, 0);
 
         gl.drawArrays(gl.TRIANGLE_FAN, 0, 4);
@@ -121,6 +123,7 @@ out vec4 _fragColor;
 
 uniform vec3 iResolution;
 uniform float iTime;
+uniform int iFrame;
 uniform vec4 iMouse;
 `;
 

@@ -43,8 +43,9 @@ const App: Component = () => {
                     <section>
                         <p>Uniforms:</p>
                         <ul style={{ 'list-style-type': 'none', 'padding': '0' }}>
-                            <li>float iTime</li>
                             <li>vec2 iResolution</li>
+                            <li>float iTime</li>
+                            <li>int iFrame</li>
                             <li>vec4 iMouse (0, 0, 0, 0)</li>
                         </ul>
                     </section>
