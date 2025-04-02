@@ -48,12 +48,6 @@ const render = (job: JobParams) => {
     let time = 0;
 
     const renderFrame = async () => {
-        if (frame >= numFrames) {
-            log("finished", frame)
-            self.postMessage({ messageType: "completed", job });
-            return;
-        }
-
         gl.useProgram(program);
 
         gl.uniform3f(iResolutionLocation, width, height, 1);
@@ -68,13 +62,18 @@ const render = (job: JobParams) => {
 
         frame++;
         time += frameTime;
-
-        requestAnimationFrame(renderFrame);
     };
 
-    renderFrame();
-
     log("rendering")
+
+    while (true) {
+        if (frame >= numFrames) {
+            log("finished", frame)
+            self.postMessage({ messageType: "completed", job });
+            break;
+        }
+        renderFrame();
+    }
 };
 
 const createShaderProgram = (gl: WebGL2RenderingContext, vertexShaderSource: string, fragmentShaderSource: string) => {

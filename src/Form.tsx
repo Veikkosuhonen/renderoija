@@ -5,12 +5,14 @@ import { Codec, EncoderJobProgressMessage, RendererJobFrameMessage, WorkerStatus
 export const Form = () => {
     let previewCanvas: HTMLCanvasElement | undefined = undefined;
 
+    const [previewOpen, setPreviewOpen] = createSignal(true)
+
     const [glsl, setGlsl] = createSignal(defaultGLSL);
-    const [width, setWidth] = createSignal(256);
-    const [height, setHeight] = createSignal(256);
-    const [duration, setDuration] = createSignal(1);
+    const [width, setWidth] = createSignal(1080);
+    const [height, setHeight] = createSignal(1920);
+    const [duration, setDuration] = createSignal(20);
     const [fps, setFps] = createSignal(30);
-    const [bitrate, setBitrate] = createSignal(1_000_000);
+    const [bitrate, setBitrate] = createSignal(6_000_000);
     const [codec, setCodec] = createSignal<Codec>("vp09.00.10.08");
 
     const [frame, setFrame] = createSignal(0);
@@ -19,19 +21,25 @@ export const Form = () => {
     const progress = () => (frame() / (duration() * fps())) * 100;
     const [workerStatus, setWorkerStatus] = createSignal<WorkerStatus>("idle");
     const [error, setError] = createSignal("");
-
-    
+    const [renderingTime, setRenderingTime] = createSignal(0)
+    const [renderingFrameTime, setRenderingFrameTime] = createSignal(1)
 
     const onSubmit = async (e: Event) => {
         e.preventDefault();
 
         setError("")
+        setRenderingTime(0)
 
         const previewCtx = previewCanvas!.getContext('bitmaprenderer')!;
+        
+        const start = Date.now()
 
         const onFrame = (e: RendererJobFrameMessage) => {
             setFrame(e.frame);
-            previewCtx.transferFromImageBitmap(e.image);
+            setRenderingFrameTime((Date.now() - start) / (e.frame + 1))
+            if (previewOpen()) {
+                previewCtx.transferFromImageBitmap(e.image);
+            }
         };
 
         const onEncodedFrame = (e: EncoderJobProgressMessage) => {
@@ -54,7 +62,9 @@ export const Form = () => {
         
             download(result.buffer)
 
-            setWorkerStatus("completed");
+            setWorkerStatus("idle");
+
+            setRenderingTime(Date.now() - start)
         } catch (e) {
             const err = e as Error;
             console.error(err);
@@ -65,35 +75,6 @@ export const Form = () => {
 
     return (
         <form onSubmit={onSubmit}>
-            <div style={{ display: 'flex', 'flex-direction': 'row', 'gap': '3rem' }}>
-                <section>
-                    <p>
-                        ShaderToy compatible GLSL renderer.
-                        <br />
-                        Supports only single pass shaders.
-                    </p>
-                </section>
-
-                <section>
-                    <p>
-                        Your code must implement:
-                        <br />
-                        void mainImage(out vec4 fragColor, in vec2 fragCoord)
-                    </p>
-                </section>
-
-                <section>
-                    <p>Uniforms:</p>
-                    <ul style={{ 'list-style-type': 'none', 'padding': '0' }}>
-                        <li>float iTime</li>
-                        <li>vec2 iResolution</li>
-                        <li>vec4 iMouse</li>
-                    </ul>
-                </section>
-            </div>
-
-            <hr class="cs-hr" style={{ 'margin-top': '1rem', 'margin-bottom': '1rem' }} />
-
             <div style={{ display: 'flex', 'flex-direction': 'row', 'margin-top': '1rem', gap: '1rem' }}>
                 <section>
                     <textarea
@@ -102,6 +83,7 @@ export const Form = () => {
                         value={glsl()}
                         disabled={workerStatus() !== "idle"}
                         onInput={(e) => setGlsl(e.currentTarget.value)}
+                        style={{ width: "480px", height: "512px" }}
                     />
                 </section>
 
@@ -182,10 +164,11 @@ export const Form = () => {
                             <div style={{ width: `${progress()}%` }} class="bars"></div>
                         </div>
                         <p>Rendering frame {frame() + 1} of {numFrames()}</p>
+                        <p>Avg FPS: {(1000.0 / renderingFrameTime()).toFixed(1)}</p>
                     </Show>
 
-                    <Show when={workerStatus() === "completed"}>
-                        <p>Render completed!</p>
+                    <Show when={renderingTime() !== 0}>
+                        <p>Render completed in {(renderingTime() / 1000).toFixed()} seconds!</p>
                     </Show>
 
                     <Show when={workerStatus() === "error"}>
@@ -196,6 +179,14 @@ export const Form = () => {
                 </section>
 
                 <section>
+                    <div style={{ "margin-bottom": "1rem", display: "flex", gap: "1rem" }}>
+                        <p>Preview</p>
+                        <button onClick={() => setPreviewOpen(!previewOpen())} class="cs-btn" type="button">
+                            <Show when={previewOpen()} fallback="Enable">
+                                Disable
+                            </Show>
+                        </button>
+                    </div>
                     <canvas ref={previewCanvas} class="cs-canvas" id="output" width={width()} height={height()}></canvas>
                 </section>
             </div>
